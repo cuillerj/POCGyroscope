@@ -148,7 +148,7 @@ void loop() {
 #endif
     if (abs(z - bias) > L3GZero_rate_level * sensitivity[LOCAL_CTRL_REG[selectedRange_Reg]])
     {
-      alpha = alpha + (z - bias) * (micros() - savTime);
+      alpha = alpha + (z - bias) * (micros() - savTime + LOCAL_CTRL_REG[GyroBiasMicrosec_Reg]);
       savTime = micros();
       float fAlpha = alpha * sensitivity[LOCAL_CTRL_REG[selectedRange_Reg]];
       int ialpha = fAlpha / 1000;
@@ -381,22 +381,29 @@ int setupL3G(uint8_t range) {
   //digitalWrite(MagnetoPowerPin, LOW);
   //From  Jim Lindblom of Sparkfun's code
   // Enable x, y, z and turn off power down:
+  uint8_t valueR;
   if (L3GAxeOrientation == 1)
   {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, 0b01001001);
+    valueR = 0b01001001;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, valueR);
+    LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG1] = valueR;
   }
   if (L3GAxeOrientation == 2)
   {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, 0b01001010);
+    valueR = 0b01001010;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, valueR);
+    LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG1] = valueR;
   }
   if (L3GAxeOrientation == 3)
   {
     //    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, 0b00001100);       // ODR=190
     uint8_t reg = 0x0f;
-    byte regValue = readRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], reg);
+    //  byte regValue = readRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], reg);
     //   if (regValue == L3GD20H )
     //   {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, 0b01001100);    // ODR=190
+    valueR = 0b01001100;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, valueR);    // ODR=190
+    LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG1] = valueR;
     //   }
     //   if (regValue == L3GD20 )
     //   {
@@ -406,15 +413,17 @@ int setupL3G(uint8_t range) {
   //
   // If you'd like to adjust/use the HPF, you can edit the line below to configure L3G_CTRL_REG2:
   // LVLen set on
-
-  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG2, 0b00100000);
-
+  valueR = 0b00100000;
+  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG2, valueR);
+  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG2] = valueR;
 
   // Configure L3G_CTRL_REG3 to generate data ready interrupt on INT2
   // No interrupts used on INT1, if you'd like to configure INT1
   // or INT2 otherwise, consult the datasheet:
 #if defined(L3GInterrupt2)
-  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG3, 0b00001000);
+  valueR = 0b00001000;
+  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG3, valueR);
+  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG3] = valueR;
 #endif
 
   // L3G_CTRL_REG4 controls the full-scale range, among other things:
@@ -422,7 +431,9 @@ int setupL3G(uint8_t range) {
   SetGyroODR(LOCAL_CTRL_REG[L3GODR_Reg]);     // set default ODT according to l3GODRValue
   // L3G_CTRL_REG5 controls high-pass filtering of outputs, use it
   // if you'd like:
-  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG5, 0b00000000);
+  valueR = 0b00000000;
+  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG5, valueR);
+  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG5] = valueR;
 }
 
 void writeRegister(int deviceAddress, byte address, byte val) {
@@ -509,6 +520,7 @@ void InitParameters(boolean allReg, uint8_t regNumber, uint8_t regValue)
     else
     {
       LOCAL_CTRL_REG[regNumber] = uint8_t(regValue);
+      LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + regNumber] = uint8_t(regValue);
     }
     Serial.println(LOCAL_CTRL_REG[MagnetocycleDuration_Reg1] * 256 + LOCAL_CTRL_REG[MagnetocycleDuration_Reg2]);
   }
@@ -538,6 +550,19 @@ void InitParameters(boolean allReg, uint8_t regNumber, uint8_t regValue)
       LOCAL_CTRL_REG[regNumber] = uint8_t(regValue);
     }
     Serial.println(LOCAL_CTRL_REG[L3GODR_Reg], HEX);
+  }
+  if (allReg || regNumber == GyroBiasMicrosec_Reg)
+  {
+    Serial.print("GyroBiasMicrosec:");
+    if (allReg)
+    {
+      LOCAL_CTRL_REG[GyroBiasMicrosec_Reg] = GyroBiasMicrosec;         // robot I2 address
+    }
+    else
+    {
+      LOCAL_CTRL_REG[regNumber] = uint8_t(regValue);
+    }
+    Serial.println(LOCAL_CTRL_REG[GyroBiasMicrosec_Reg], HEX);
   }
 }
 void receiveEvent(int howMany) {
@@ -667,30 +692,38 @@ int UpdateNorthOrientation()
 }
 void PrintRegisters()
 {
-  for (uint8_t reg = 0x20; reg <= 0x39; reg++)
+  for (uint8_t reg = L3GRegistersCopySubsystemFirst; reg < L3GRegistersCopySubsystemFirst + L3GRegistersCopySubsystemNumber; reg++)
   {
     byte regValue = readRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], reg);
-    Serial.print("L3G register ");
+    uint8_t idx=L3GRegistersCopySubsystemMapping+reg;
+    LOCAL_CTRL_REG[idx] = regValue;
+    Serial.print("L3G register 0x");
     Serial.print(reg, HEX);
     Serial.print(":");
     Serial.println(regValue, BIN);
-    delay(100); //wait for the sensor to be ready
+    delay(50); //wait for the sensor to be ready
   }
 
 }
 void SetGyroRegistersRange(uint8_t range)
 {
+  uint8_t valueR;
   digitalWrite(SensorOutputReadyPin, LOW);
   if (range == 0) {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, 0b00000000);
+    valueR = 0b00000000;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, valueR);
+
     Serial.println("range 0");
   } else if (range == 1) {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, 0b00010000);
+    valueR = 0b00010000;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, valueR);
     Serial.println("range 1");
   } else {
-    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, 0b00100000);
+    valueR = 0b00100000;
+    writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG4, valueR);
     Serial.println("range 2");
   }
+  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG4] = valueR;
   Robot_CalibrateGyro(L3GD20H_Address);
   digitalWrite(SensorOutputReadyPin, HIGH);
 }
@@ -702,6 +735,7 @@ void SetGyroODR(uint8_t parameter)
   parameter = parameter & 0xf0;   // keep the half right part of the byte
   value = value  | parameter;
   writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG1, value);
+  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG1] = value;
   Robot_CalibrateGyro(L3GD20H_Address);
   digitalWrite(SensorOutputReadyPin, HIGH);
 }
