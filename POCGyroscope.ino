@@ -281,6 +281,7 @@ void loop() {
         case calibrateGyro:
           {
             monitGyro = false;
+            bitWrite(currentStatus,  monitGyroStatusBit, 0);
             detachInterrupt(L3GInterruptNumber);
             alpha = 0;
             LOCAL_CTRL_REG[relativeHeading_Reg1] = 0x00;
@@ -413,9 +414,9 @@ int setupL3G(uint8_t range) {
   //
   // If you'd like to adjust/use the HPF, you can edit the line below to configure L3G_CTRL_REG2:
   // LVLen set on
-  valueR = 0b00100000;
-  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG2, valueR);
-  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG2] = valueR;
+  //  valueR = 0b00100000;
+  //  writeRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], L3G_CTRL_REG2, valueR);
+  //  LOCAL_CTRL_REG[L3GRegistersCopySubsystemMapping + L3G_CTRL_REG2] = valueR;
 
   // Configure L3G_CTRL_REG3 to generate data ready interrupt on INT2
   // No interrupts used on INT1, if you'd like to configure INT1
@@ -483,6 +484,9 @@ void InitParameters(boolean allReg, uint8_t regNumber, uint8_t regValue)
     }
     Serial.println(LOCAL_CTRL_REG[selectedRange_Reg]);
   }
+#if defined(L3GInterrupt2)
+#else
+
   if (allReg || regNumber == L3GcycleDuration_Reg)
   {
     Serial.print("L3G polling cycle:");
@@ -496,6 +500,7 @@ void InitParameters(boolean allReg, uint8_t regNumber, uint8_t regValue)
     }
     Serial.println(LOCAL_CTRL_REG[L3GcycleDuration_Reg]);
   }
+#endif
   if (allReg || regNumber == robotAddress_Reg)
   {
     Serial.print("Robot addrsss:");
@@ -695,7 +700,7 @@ void PrintRegisters()
   for (uint8_t reg = L3GRegistersCopySubsystemFirst; reg < L3GRegistersCopySubsystemFirst + L3GRegistersCopySubsystemNumber; reg++)
   {
     byte regValue = readRegister(LOCAL_CTRL_REG[L3GD20H_Address_Reg], reg);
-    uint8_t idx=L3GRegistersCopySubsystemMapping+reg;
+    uint8_t idx = L3GRegistersCopySubsystemMapping + reg;
     LOCAL_CTRL_REG[idx] = regValue;
     Serial.print("L3G register 0x");
     Serial.print(reg, HEX);
